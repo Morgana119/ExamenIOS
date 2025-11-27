@@ -72,6 +72,7 @@ class SudokuGameViewModel: ObservableObject {
             viewState = .error("No se pudo generar un nuevo puzzle. Revisa tu conexión e inténtalo de nuevo.")
             return
         }
+//        print("\n======== API RAW RESPONSE ========")
 //        print("PUZZLE:")
 //        for row in response.puzzle {
 //            print(row)
@@ -80,6 +81,7 @@ class SudokuGameViewModel: ObservableObject {
 //        for row in response.solution {
 //            print(row)
 //        }
+//        print("=================================\n")
         
         self.initialBoard = response.puzzle
         self.board = response.puzzle
@@ -157,30 +159,88 @@ class SudokuGameViewModel: ObservableObject {
         saveCurrentGame()
     }
     
+//    func verifySolution() {
+//        guard !board.isEmpty, !solution.isEmpty else { return }
+//
+//        for r in 0..<board.count {
+//            for c in 0..<board[r].count {
+//                guard let value = board[r][c] else {
+//                    verificationSuccess = false
+//                    verificationMessage = "La solución está incompleta. Hay celdas vacías."
+//                    return
+//                }
+//                if solution.indices.contains(r),
+//                   solution[r].indices.contains(c),
+//                   solution[r][c] != value {
+//                    verificationSuccess = false
+//                    verificationMessage = "Hay uno o más números incorrectos. Puedes corregirlos y seguir jugando."
+//                    return
+//                }
+//            }
+//        }
+//
+//        verificationSuccess = true
+//        verificationMessage = "¡Felicidades! La solución es correcta"
+//        saveCurrentGame()
+//    }
+
+    // SOLUCIÓN PARA LOS +10 PUNTOS
     func verifySolution() {
-        guard !board.isEmpty, !solution.isEmpty else { return }
-        
-        for r in 0..<board.count {
-            for c in 0..<board[r].count {
-                guard let value = board[r][c] else {
-                    verificationSuccess = false
-                    verificationMessage = "La solución está incompleta. Hay celdas vacías."
-                    return
-                }
-                if solution.indices.contains(r),
-                   solution[r].indices.contains(c),
-                   solution[r][c] != value {
-                    verificationSuccess = false
-                    verificationMessage = "Hay uno o más números incorrectos. Puedes corregirlos y seguir jugando."
-                    return
+        Task {
+            let puzzleWithZeros: [[Int]] = initialBoard.map { row in
+                row.map { cell in
+                    cell ?? 0
                 }
             }
+            
+            guard let solveResponse = await sudokuRequirement.solveSudoku(
+                pattern: pattern,
+                puzzle: puzzleWithZeros
+            ) else {
+                await MainActor.run {
+                    self.verificationSuccess = false
+                    self.verificationMessage = "No se pudo verificar la solución. Revisa tu conexión e inténtalo nuevamente."
+                }
+                return
+            }
+            
+            let apiSolution = solveResponse.solution
+            
+            for r in 0..<board.count {
+                for c in 0..<board[r].count {
+                    if board[r][c] == nil {
+                        await MainActor.run {
+                            self.verificationSuccess = false
+                            self.verificationMessage = "La solución está incompleta. Hay celdas vacías."
+                        }
+                        return
+                    }
+                }
+            }
+            
+            for r in 0..<board.count {
+                for c in 0..<board[r].count {
+                    guard let value = board[r][c] else { continue }
+                    
+                    if apiSolution.indices.contains(r),
+                       apiSolution[r].indices.contains(c) {
+                        
+                        if apiSolution[r][c] != value {
+                            await MainActor.run {
+                                self.verificationSuccess = false
+                                self.verificationMessage = "Hay uno o más números incorrectos. Puedes corregirlos y seguir jugando."
+                            }
+                            return
+                        }
+                    }
+                }
+            }
+            
+            await MainActor.run {
+                self.verificationSuccess = true
+                self.verificationMessage = "¡Felicidades! La solución es correcta"
+                self.saveCurrentGame()
+            }
         }
-        
-        verificationSuccess = true
-        verificationMessage = "¡Felicidades! La solución es correcta"
-        saveCurrentGame()
     }
 }
-
-

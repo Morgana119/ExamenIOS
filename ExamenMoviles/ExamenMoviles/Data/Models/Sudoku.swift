@@ -12,6 +12,12 @@ struct SudokuResponse: Codable {
     let solution: [[Int]]
 }
 
+// SOLUCIÓN PARA LOS +10 PUNTOS
+struct SudokuSolveResponse: Codable {
+    let status: String
+    let solution: [[Int]]
+}
+
 enum SudokuDifficulty: String, CaseIterable, Codable {
     case easy
     case medium

@@ -42,12 +42,6 @@ struct SudokuGameView: View {
                         .font(.subheadline)
                         .foregroundColor(.gray)
                     
-//                    let dimension = viewModel.boardDimension
-//                    let columns = Array(
-//                        repeating: GridItem(.flexible(minimum: 30), spacing: 2),
-//                        count: dimension
-//                    )
-                    
                     VStack(spacing: 2) {
                         ForEach(0..<viewModel.board.count, id: \.self) { row in
                             HStack(spacing: 2) {
